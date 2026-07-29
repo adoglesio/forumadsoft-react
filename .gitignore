@@ -1,0 +1,30 @@
+# Dependências
+node_modules/
+*/node_modules/
+
+# Banco de dados (dados pessoais!)
+backend/data/forum.db
+backend/data/forum.db-shm
+backend/data/forum.db-wal
+backend/data/*.db
+
+# Variáveis de ambiente
+.env
+frontend/.env
+backend/.env
+!backend/.env.example
+!frontend/.env.example
+
+# Build
+frontend/dist/
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos desnecessários
+*.7z
+*.rar
+forum.rar
+forumadsoft-react.rar
+dist.7z

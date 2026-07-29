@@ -1,0 +1,15 @@
+{
+  "name": "forumadsoft",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"cd backend && node src/server.js\" \"cd frontend && npm run dev\"",
+    "backend": "cd backend && node src/server.js",
+    "frontend": "cd frontend && npm run dev",
+    "migrate": "node migrate.js",
+    "build": "cd frontend && npm run build"
+  },
+  "dependencies": {
+    "concurrently": "^9.2.1",
+    "dotenv": "^17.4.2"
+  }
+}
