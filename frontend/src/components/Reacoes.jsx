@@ -53,10 +53,10 @@ export default function Reacoes({ erroId, user }) {
             style={{
               display: "flex", alignItems: "center", gap: 4,
               padding: "4px 10px", borderRadius: 20,
-              border: ativa ? "1.5px solid #0A5C8E" : `1px solid ${tema.inputBorder}`,
-              background: ativa ? "#EFF7FF" : tema.cardBg,
+              border: ativa ? "1.5px solid var(--primary)" : `1px solid ${tema.inputBorder}`,
+              background: ativa ? "var(--primary-soft)" : tema.cardBg,
               cursor: "pointer", fontSize: 14,
-              color: ativa ? "#0A5C8E" : tema.textoSecundario,
+              color: ativa ? "var(--primary)" : tema.textoSecundario,
               fontWeight: ativa ? 600 : 400,
               transition: "all 0.15s",
             }}
@@ -97,8 +97,8 @@ export default function Reacoes({ erroId, user }) {
                 title={r.label}
                 style={{
                   width: 38, height: 38, borderRadius: "50%",
-                  border: dados.minhas.includes(r.tipo) ? "2px solid #0A5C8E" : "2px solid transparent",
-                  background: dados.minhas.includes(r.tipo) ? "#EFF7FF" : "transparent",
+                  border: dados.minhas.includes(r.tipo) ? "2px solid var(--primary)" : "2px solid transparent",
+                  background: dados.minhas.includes(r.tipo) ? "var(--primary-soft)" : "transparent",
                   cursor: "pointer", fontSize: 20,
                   transition: "transform 0.1s",
                   display: "flex", alignItems: "center", justifyContent: "center",

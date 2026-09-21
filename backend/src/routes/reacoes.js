@@ -1,44 +1,36 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+const { query } = require('../db/database');
 
-// Criar tabela se não existir
-db.exec(`
-  CREATE TABLE IF NOT EXISTS reacoes (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    erro_id       INTEGER NOT NULL,
-    usuario_email TEXT NOT NULL,
-    tipo          TEXT NOT NULL,
-    created_at    TEXT DEFAULT (datetime('now')),
-    UNIQUE(erro_id, usuario_email, tipo)
-  );
-`);
+// Tabela já criada pelo supabase/schema.sql.
 
-// Buscar reações de um erro
-router.get('/:erroId', (req, res) => {
-  const reacoes = db.prepare('SELECT tipo, COUNT(*) as total FROM reacoes WHERE erro_id = ? GROUP BY tipo').all(req.params.erroId);
-  const minhas = req.query.usuario_email
-    ? db.prepare('SELECT tipo FROM reacoes WHERE erro_id = ? AND usuario_email = ?').all(req.params.erroId, req.query.usuario_email).map(r => r.tipo)
-    : [];
-  res.json({ success: true, data: { reacoes, minhas } });
+router.get('/:erroId', async (req, res) => {
+  try {
+    const reacoes = await query('SELECT tipo, COUNT(*)::int as total FROM reacoes WHERE erro_id = $1 GROUP BY tipo', [req.params.erroId]);
+    const minhas = req.query.usuario_email
+      ? (await query('SELECT tipo FROM reacoes WHERE erro_id = $1 AND usuario_email = $2', [req.params.erroId, req.query.usuario_email])).map(r => r.tipo)
+      : [];
+    res.json({ success: true, data: { reacoes, minhas } });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// Adicionar ou remover reação (toggle)
-router.post('/:erroId', (req, res) => {
-  const { usuario_email, tipo } = req.body;
-  if (!usuario_email || !tipo) return res.status(400).json({ success: false });
+router.post('/:erroId', async (req, res) => {
+  try {
+    const { usuario_email, tipo } = req.body;
+    if (!usuario_email || !tipo) return res.status(400).json({ success: false });
 
-  const existe = db.prepare('SELECT id FROM reacoes WHERE erro_id = ? AND usuario_email = ? AND tipo = ?').get(req.params.erroId, usuario_email, tipo);
+    const existe = await query('SELECT id FROM reacoes WHERE erro_id = $1 AND usuario_email = $2 AND tipo = $3', [req.params.erroId, usuario_email, tipo]);
 
-  if (existe) {
-    db.prepare('DELETE FROM reacoes WHERE id = ?').run(existe.id);
-  } else {
-    db.prepare('INSERT INTO reacoes (erro_id, usuario_email, tipo) VALUES (?, ?, ?)').run(req.params.erroId, usuario_email, tipo);
-  }
+    if (existe.length) {
+      await query('DELETE FROM reacoes WHERE id = $1', [existe[0].id]);
+    } else {
+      await query('INSERT INTO reacoes (erro_id, usuario_email, tipo) VALUES ($1, $2, $3)', [req.params.erroId, usuario_email, tipo]);
+    }
 
-  const reacoes = db.prepare('SELECT tipo, COUNT(*) as total FROM reacoes WHERE erro_id = ? GROUP BY tipo').all(req.params.erroId);
-  const minhas = db.prepare('SELECT tipo FROM reacoes WHERE erro_id = ? AND usuario_email = ?').all(req.params.erroId, usuario_email).map(r => r.tipo);
-  res.json({ success: true, data: { reacoes, minhas } });
+    const reacoes = await query('SELECT tipo, COUNT(*)::int as total FROM reacoes WHERE erro_id = $1 GROUP BY tipo', [req.params.erroId]);
+    const minhas = (await query('SELECT tipo FROM reacoes WHERE erro_id = $1 AND usuario_email = $2', [req.params.erroId, usuario_email])).map(r => r.tipo);
+    res.json({ success: true, data: { reacoes, minhas } });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 module.exports = router;

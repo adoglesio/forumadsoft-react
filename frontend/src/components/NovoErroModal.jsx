@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
 import { criarErro, listarProdutos, getProdutosUsuario } from "../services/api";
 import LogoProduto from "./LogoProduto";
 import { MdReportGmailerrorred } from "react-icons/md";
+import { IoClose } from "react-icons/io5";
 
 export default function NovoErroModal({ onClose, onCriado }) {
   const { user } = useAuth();
-  const { tema } = useTheme();
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [solucao, setSolucao] = useState("");
@@ -22,7 +21,6 @@ export default function NovoErroModal({ onClose, onCriado }) {
       try {
         const todos = await listarProdutos();
         const meus = await getProdutosUsuario(user.email);
-        // Mostrar só os produtos que o usuário tem acesso
         const filtrados = user.isAdmin ? todos : todos.filter(p => meus.includes(p.id));
         setProdutos(filtrados);
         if (filtrados.length === 1) setProdutoId(filtrados[0].id);
@@ -51,30 +49,23 @@ export default function NovoErroModal({ onClose, onCriado }) {
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: tema.cardBg, borderRadius: 20, padding: 28, width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 16px 48px rgba(0,0,0,0.2)" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(8,14,22,0.55)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
+      <div className="card" style={{ padding: 28, width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--shadow-pop)", animation: "df-pop-in 0.2s ease" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h3 style={{ margin: 0, color: tema.textoPrimario, fontSize: 18, fontWeight: 700 }}><MdReportGmailerrorred /> Reportar Erro</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: tema.textoMutado }}>×</button>
+          <h3 style={{ margin: 0, color: "var(--text)", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}><MdReportGmailerrorred size={20} /> Reportar erro</h3>
+          <button onClick={onClose} className="btn-icon btn-ghost" style={{ border: "none" }} aria-label="Fechar"><IoClose size={20} /></button>
         </div>
 
-        {/* Produto */}
         {produtos.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle(tema)}>Produto</label>
+          <div className="field">
+            <label className="field-label">Produto</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {produtos.map(p => (
                 <button
                   key={p.id}
                   onClick={() => setProdutoId(produtoId === p.id ? "" : p.id)}
-                  style={{
-                    padding: "6px 16px", borderRadius: 20, border: "none",
-                    cursor: "pointer", fontSize: 13, fontWeight: 600,
-                    background: produtoId === p.id ? p.cor : tema.inputBg,
-                    color: produtoId === p.id ? "white" : tema.textoSecundario,
-                    outline: produtoId === p.id ? `2px solid ${p.cor}` : `1px solid ${tema.inputBorder}`,
-                    transition: "all 0.15s",
-                  }}
+                  className={`chip ${produtoId === p.id ? "chip-active" : ""}`}
+                  style={{ background: produtoId === p.id ? p.cor : undefined, color: produtoId === p.id ? "white" : undefined }}
                 >
                   <LogoProduto icone={p.icone} nome={p.nome} cor={p.cor} size="sm" style={{ height: 14, maxWidth: 70, filter: produtoId === p.id ? "brightness(10)" : "none" }} />
                 </button>
@@ -83,39 +74,36 @@ export default function NovoErroModal({ onClose, onCriado }) {
           </div>
         )}
 
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle(tema)}>Título *</label>
-          <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Descreva o erro brevemente" style={inputStyle(tema)} />
+        <div className="field">
+          <label className="field-label field-required">Título</label>
+          <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Descreva o erro brevemente" className="input" />
         </div>
 
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle(tema)}>Descrição *</label>
-          <textarea value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Detalhe o problema..." rows={4} style={{ ...inputStyle(tema), resize: "vertical" }} />
+        <div className="field">
+          <label className="field-label field-required">Descrição</label>
+          <textarea value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Detalhe o problema..." rows={4} className="textarea" />
         </div>
 
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle(tema)}>Solução (opcional)</label>
-          <textarea value={solucao} onChange={e => setSolucao(e.target.value)} placeholder="Se já souber a solução..." rows={3} style={{ ...inputStyle(tema), resize: "vertical" }} />
+        <div className="field">
+          <label className="field-label">Solução (opcional)</label>
+          <textarea value={solucao} onChange={e => setSolucao(e.target.value)} placeholder="Se já souber a solução..." rows={3} className="textarea" />
         </div>
 
-        <div style={{ marginBottom: 20 }}>
-          <label style={labelStyle(tema)}>Imagem (opcional)</label>
-          <input type="file" accept="image/*" onChange={handleImagem} style={{ fontSize: 13, color: tema.textoSecundario }} />
+        <div className="field" style={{ marginBottom: 20 }}>
+          <label className="field-label">Imagem (opcional)</label>
+          <input type="file" accept="image/*" onChange={handleImagem} style={{ fontSize: 13, color: "var(--text-secondary)" }} />
           {imagem && <img src={imagem} alt="" style={{ width: "100%", borderRadius: 8, marginTop: 8, maxHeight: 120, objectFit: "cover" }} />}
         </div>
 
-        {erro && <p style={{ color: "#DC2626", fontSize: 13, marginBottom: 12 }}>{erro}</p>}
+        {erro && <p className="form-message form-message-error" style={{ marginBottom: 12 }}>{erro}</p>}
 
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{ padding: "10px 20px", background: "transparent", border: `1px solid ${tema.inputBorder}`, borderRadius: 40, cursor: "pointer", color: tema.textoSecundario }}>Cancelar</button>
-          <button onClick={handleSubmit} disabled={salvando} style={{ padding: "10px 24px", background: "#0A5C8E", color: "white", border: "none", borderRadius: 40, fontWeight: 600, cursor: "pointer" }}>
-            {salvando ? "Salvando..." : "Reportar Erro"}
+          <button onClick={onClose} className="btn btn-secondary">Cancelar</button>
+          <button onClick={handleSubmit} disabled={salvando} className="btn btn-primary">
+            {salvando ? "Salvando..." : "Reportar erro"}
           </button>
         </div>
       </div>
     </div>
   );
 }
-
-const labelStyle = (tema) => ({ display: "block", fontWeight: 600, fontSize: 13, marginBottom: 6, color: tema.textoPrimario });
-const inputStyle = (tema) => ({ width: "100%", padding: "10px 14px", border: `1px solid ${tema.inputBorder}`, borderRadius: 10, fontSize: 14, outline: "none", background: tema.inputBg, color: tema.textoPrimario, boxSizing: "border-box" });

@@ -11,11 +11,6 @@ export default defineConfig({
         target: "http://localhost:3001",
         changeOrigin: true,
       },
-      "/api365": {
-        target: "https://webws.365scores.com/web",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api365/, ""),
-      },
     },
   },
 });

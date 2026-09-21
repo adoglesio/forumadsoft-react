@@ -7,7 +7,7 @@ import api from "../services/api";
 
 export default function PerfilSidebar({ onEditarPerfil }) {
   const { user } = useAuth();
-  const { tema, temaNome } = useTheme();
+  const { temaNome } = useTheme();
   const [produtos, setProdutos] = useState([]);
 
   useEffect(() => {
@@ -24,74 +24,51 @@ export default function PerfilSidebar({ onEditarPerfil }) {
   const isEscuro = temaNome === "escuro";
 
   return (
-    <aside style={{
-      width: 220, flexShrink: 0,
-      alignSelf: "flex-start",
-      position: "sticky", top: 80,
-      display: "flex", flexDirection: "column", gap: 12,
-    }}>
-      {/* Card do perfil */}
-      <div style={{ background: tema.cardBg, borderRadius: 16, overflow: "hidden", border: `1px solid ${tema.asideBorder}`, boxShadow: tema.cardSombra }}>
+    <aside style={{ display: "flex", flexDirection: "column", gap: 12, alignSelf: "flex-start", position: "sticky", top: 80, width: "100%" }}>
+      <div className="card" style={{ overflow: "hidden" }}>
 
-        {/* Banner */}
         <div style={{
-          height: 72,
+          height: 68,
           background: isEscuro
             ? "linear-gradient(135deg, #0d2035 0%, #0d1117 100%)"
             : "linear-gradient(135deg, #0A5C8E 0%, #1a7ab8 100%)",
         }} />
 
-        {/* Avatar */}
-        <div style={{ padding: "0 16px 16px", marginTop: -28 }}>
+        <div style={{ padding: "0 16px 16px", marginTop: -26 }}>
           <div style={{ marginBottom: 10 }}>
             {user?.avatar
-              ? <img src={user.avatar} alt="" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", border: `3px solid ${tema.cardBg}`, boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }} />
-              : <div style={{ width: 56, height: 56, borderRadius: "50%", background: isEscuro ? "#58a6ff" : "#0A5C8E", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 22, border: `3px solid ${tema.cardBg}` }}>
+              ? <img src={user.avatar} alt="" style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--surface)", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }} />
+              : <div style={{ width: 54, height: 54, borderRadius: "50%", background: "var(--primary)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 20, border: "3px solid var(--surface)" }}>
                   {user?.nome?.charAt(0)?.toUpperCase()}
                 </div>
             }
           </div>
 
-          <div style={{ fontWeight: 700, fontSize: 15, color: tema.textoPrimario, marginBottom: 2 }}>{user?.nome}</div>
-          <div style={{ fontSize: 12, color: tema.textoMutado, marginBottom: user?.bio ? 8 : 12 }}>{user?.email}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.nome}</div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: user?.bio ? 8 : 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email}</div>
 
           {user?.bio && (
-            <p style={{ fontSize: 12, color: tema.textoSecundario, margin: "0 0 12px", lineHeight: 1.5 }}>{user.bio}</p>
+            <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: "0 0 12px", lineHeight: 1.5 }}>{user.bio}</p>
           )}
 
           {user?.isAdmin && (
-            <span style={{ background: "gold", color: "#333", fontSize: 10, padding: "2px 10px", borderRadius: 20, fontWeight: 700, display: "inline-block", marginBottom: 12 }}>
+            <span className="badge" style={{ background: "#F6C64B", color: "#4A3300", marginBottom: 12 }}>
               Administrador
             </span>
           )}
 
-          <button
-            onClick={onEditarPerfil}
-            style={{
-              width: "100%", padding: "7px 0",
-              background: "transparent",
-              border: `1px solid ${tema.headerBorder}`,
-              borderRadius: 8, cursor: "pointer",
-              fontSize: 12, fontWeight: 600,
-              color: tema.textoSecundario,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              transition: "all 0.15s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = tema.sidebarHover; e.currentTarget.style.color = tema.textoPrimario; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = tema.textoSecundario; }}
-          >
-            <IoPencil size={12} style={{marginRight:4}} />Editar seu perfil
+          <button onClick={onEditarPerfil} className="btn btn-ghost btn-sm btn-block" style={{ border: "1px solid var(--border)" }}>
+            <IoPencil size={12} />Editar perfil
           </button>
         </div>
       </div>
 
-      {/* Card de produtos */}
       {produtos.length > 0 && (
-        <div style={{ background: tema.cardBg, borderRadius: 16, padding: "14px 16px", border: `1px solid ${tema.asideBorder}`, boxShadow: tema.cardSombra }}>
-          <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: tema.textoMutado, textTransform: "uppercase", letterSpacing: 0.8 }}>Meus Produtos</p>
+        <div className="card" style={{ padding: "14px 16px" }}>
+          <p style={{ margin: "0 0 10px", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.8 }}>Meus produtos</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {produtos.map(p => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 8, background: tema.pageBg, border: `1px solid ${tema.headerBorder}` }}>
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 8, background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: p.cor, flexShrink: 0 }} />
                 <LogoProduto icone={p.icone} nome={p.nome} cor={p.cor} size="sm" style={{ height: 16, maxWidth: 80 }} />
               </div>

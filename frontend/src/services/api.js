@@ -58,16 +58,6 @@ export const alterarSenha = (dados) =>
 export const carregarEstatisticas = () =>
   api.get("/estatisticas").then((r) => r.data.data);
 
-// ─── USUÁRIOS ONLINE ──────────────────────────────────────
-export const enviarPing = (dados) =>
-  api.post("/usuarios/ping", dados).then((r) => r.data.success);
-
-export const listarOnline = () =>
-  api.get("/usuarios/online").then((r) => r.data.data);
-
-export const fazerLogout = (email) =>
-  api.post("/usuarios/logout", { email }).then((r) => r.data.success);
-
 // ─── REAÇÕES ──────────────────────────────────────────────
 export const buscarReacoes = (erroId, usuario_email) =>
   api.get(`/reacoes/${erroId}`, { params: { usuario_email } }).then((r) => r.data.data);

@@ -1,94 +1,73 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+const { query, queryOne } = require('../db/database');
 
-// Criar tabelas se não existirem
-db.exec(`
-  CREATE TABLE IF NOT EXISTS produtos (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome       TEXT UNIQUE NOT NULL,
-    cor        TEXT DEFAULT '#0A5C8E',
-    icone      TEXT DEFAULT '📦',
-    created_at TEXT DEFAULT (datetime('now'))
-  );
+// Tabelas e produtos padrão já são criados pelo supabase/schema.sql —
+// não é preciso criar nada aqui em tempo de execução.
 
-  CREATE TABLE IF NOT EXISTS usuario_produtos (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    usuario_email TEXT NOT NULL,
-    produto_id    INTEGER NOT NULL,
-    UNIQUE(usuario_email, produto_id),
-    FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE
-  );
-`);
-
-// Inserir produtos padrão se não existirem
-const produtosDefault = [
-  { nome: 'SIAFW',          cor: '#0A5C8E', icone: 'SIAFW' },
-  { nome: 'SIAF Evolution', cor: '#1a7ab8', icone: 'siafEvolution' },
-  { nome: 'GOL',            cor: '#0d1f3c', icone: 'GOL' },
-  { nome: 'AdChef',         cor: '#4f46e5', icone: 'adchef' },
-];
-for (const p of produtosDefault) {
-  db.prepare('INSERT OR IGNORE INTO produtos (nome, cor, icone) VALUES (?, ?, ?)').run(p.nome, p.cor, p.icone);
-}
-
-// ── Listar todos os produtos
-router.get('/', (req, res) => {
-  const produtos = db.prepare('SELECT * FROM produtos ORDER BY nome').all();
-  res.json({ success: true, data: produtos });
-});
-
-// ── Criar produto (admin)
-router.post('/', (req, res) => {
-  const { nome, cor, icone, usuario_email } = req.body;
-  const u = db.prepare('SELECT * FROM usuarios WHERE email = ?').get(usuario_email);
-  if (!u?.isAdmin) return res.status(403).json({ success: false, error: 'Sem permissão' });
-  if (!nome) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
+router.get('/', async (req, res) => {
   try {
-    const r = db.prepare('INSERT INTO produtos (nome, cor, icone) VALUES (?, ?, ?)').run(nome, cor || '#0A5C8E', icone || '📦');
-    res.json({ success: true, data: db.prepare('SELECT * FROM produtos WHERE id = ?').get(r.lastInsertRowid) });
-  } catch {
-    res.status(400).json({ success: false, error: 'Produto já existe' });
+    res.json({ success: true, data: await query('SELECT * FROM produtos ORDER BY nome') });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+router.post('/', async (req, res) => {
+  try {
+    const { nome, cor, icone, usuario_email } = req.body;
+    const u = await queryOne('SELECT * FROM usuarios WHERE email = $1', [usuario_email]);
+    if (!u?.is_admin) return res.status(403).json({ success: false, error: 'Sem permissão' });
+    if (!nome) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
+    const novo = await queryOne(
+      'INSERT INTO produtos (nome, cor, icone) VALUES ($1, $2, $3) RETURNING *',
+      [nome, cor || '#0A5C8E', icone || '📦']
+    );
+    res.json({ success: true, data: novo });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.code === '23505' ? 'Produto já existe' : e.message });
   }
 });
 
-// ── Deletar produto (admin)
-router.delete('/:id', (req, res) => {
-  const { usuario_email } = req.body;
-  const u = db.prepare('SELECT * FROM usuarios WHERE email = ?').get(usuario_email);
-  if (!u?.isAdmin) return res.status(403).json({ success: false, error: 'Sem permissão' });
-  db.prepare('DELETE FROM produtos WHERE id = ?').run(req.params.id);
-  res.json({ success: true });
+router.delete('/:id', async (req, res) => {
+  try {
+    const { usuario_email } = req.body;
+    const u = await queryOne('SELECT * FROM usuarios WHERE email = $1', [usuario_email]);
+    if (!u?.is_admin) return res.status(403).json({ success: false, error: 'Sem permissão' });
+    await query('DELETE FROM produtos WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// ── Buscar produtos de um usuário
-router.get('/usuario/:email', (req, res) => {
-  const email = decodeURIComponent(req.params.email);
-  const u = db.prepare('SELECT * FROM usuarios WHERE email = ?').get(email);
-  if (!u) return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
-  if (u.isAdmin) {
-    const todos = db.prepare('SELECT * FROM produtos ORDER BY nome').all();
-    return res.json({ success: true, data: todos.map(p => p.id) });
-  }
-  const produtos = db.prepare(`
-    SELECT p.id FROM produtos p
-    INNER JOIN usuario_produtos up ON up.produto_id = p.id
-    WHERE up.usuario_email = ?
-  `).all(email).map(p => p.id);
-  res.json({ success: true, data: produtos });
+router.get('/usuario/:email', async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
+    const u = await queryOne('SELECT * FROM usuarios WHERE email = $1', [email]);
+    if (!u) return res.status(404).json({ success: false, error: 'Usuário não encontrado' });
+    if (u.is_admin) {
+      const todos = await query('SELECT id FROM produtos ORDER BY nome');
+      return res.json({ success: true, data: todos.map(p => p.id) });
+    }
+    const produtos = await query(
+      `SELECT p.id FROM produtos p
+       INNER JOIN usuario_produtos up ON up.produto_id = p.id
+       WHERE up.usuario_email = $1`,
+      [email]
+    );
+    res.json({ success: true, data: produtos.map(p => p.id) });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// ── Definir produtos de um usuário (admin)
-router.put('/usuario/:email', (req, res) => {
-  const { produto_ids, usuario_email } = req.body;
-  const u = db.prepare('SELECT * FROM usuarios WHERE email = ?').get(usuario_email);
-  if (!u?.isAdmin) return res.status(403).json({ success: false, error: 'Sem permissão' });
-  const email = decodeURIComponent(req.params.email);
-  db.prepare('DELETE FROM usuario_produtos WHERE usuario_email = ?').run(email);
-  for (const id of (produto_ids || [])) {
-    db.prepare('INSERT OR IGNORE INTO usuario_produtos (usuario_email, produto_id) VALUES (?, ?)').run(email, id);
-  }
-  res.json({ success: true });
+router.put('/usuario/:email', async (req, res) => {
+  try {
+    const { produto_ids, usuario_email } = req.body;
+    const u = await queryOne('SELECT * FROM usuarios WHERE email = $1', [usuario_email]);
+    if (!u?.is_admin) return res.status(403).json({ success: false, error: 'Sem permissão' });
+    const email = decodeURIComponent(req.params.email);
+    await query('DELETE FROM usuario_produtos WHERE usuario_email = $1', [email]);
+    for (const id of (produto_ids || [])) {
+      await query('INSERT INTO usuario_produtos (usuario_email, produto_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [email, id]);
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 module.exports = router;

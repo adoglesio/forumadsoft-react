@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import api from "../services/api";
 import { useTheme } from "../context/ThemeContext";
 import LogoProduto from "./LogoProduto";
+import { useOnlineUsers } from "../hooks/useOnlineUsers";
 
 // ─── Popup de perfil ───────────────────────────────────────────────────────
 function PerfilPopup({ usuario, onFechar }) {
@@ -141,32 +142,28 @@ function ProdutoChip({ p, tema }) {
 // ─── Componente principal ──────────────────────────────────────────────────
 export default function UsuariosOnline() {
   const { tema } = useTheme();
-  const [online, setOnline] = useState([]);
+  const online = useOnlineUsers();
   const [selecionado, setSelecionado] = useState(null);
   const [produtosMap, setProdutosMap] = useState({});
 
   useEffect(() => {
-    carregar();
-    const id = setInterval(carregar, 10000);
-    return () => clearInterval(id);
-  }, []);
-
-  async function carregar() {
-    try {
-      const { data } = await api.get("/usuarios/online");
-      const lista = data.data || [];
-      setOnline(lista);
-      const todos = await api.get('/produtos').then(r => r.data.data);
-      const map = {};
-      await Promise.all(lista.map(async u => {
-        try {
-          const ids = await api.get(`/produtos/usuario/${encodeURIComponent(u.email)}`).then(r => r.data.data);
-          map[u.email] = todos.filter(p => ids.includes(p.id));
-        } catch { map[u.email] = []; }
-      }));
-      setProdutosMap(map);
-    } catch {}
-  }
+    if (online.length === 0) { setProdutosMap({}); return; }
+    let cancelado = false;
+    (async () => {
+      try {
+        const todos = await api.get('/produtos').then(r => r.data.data);
+        const map = {};
+        await Promise.all(online.map(async u => {
+          try {
+            const ids = await api.get(`/produtos/usuario/${encodeURIComponent(u.email)}`).then(r => r.data.data);
+            map[u.email] = todos.filter(p => ids.includes(p.id));
+          } catch { map[u.email] = []; }
+        }));
+        if (!cancelado) setProdutosMap(map);
+      } catch {}
+    })();
+    return () => { cancelado = true; };
+  }, [online]);
 
   return (
     <>

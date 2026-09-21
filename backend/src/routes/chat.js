@@ -1,55 +1,39 @@
 const express = require('express');
 const router = express.Router();
+const { query, queryOne } = require('../db/database');
 
-// Mensagens apenas em memória (some ao reiniciar)
-const mensagens = [];
-let msgId = 1;
+// Mensagens agora persistem no Postgres (tabela `chat`). A entrega em tempo
+// real para os outros usuários é feita pelo Supabase Realtime, direto do
+// frontend — não precisamos mais fazer broadcast por SSE aqui.
 
-// Listar mensagens
-router.get('/', (req, res) => {
-  res.json({ success: true, data: mensagens });
+router.get('/', async (req, res) => {
+  try {
+    const mensagens = await query('SELECT * FROM chat ORDER BY data ASC LIMIT 200');
+    res.json({ success: true, data: mensagens });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// Enviar mensagem
-router.post('/', (req, res) => {
-  const { usuario, usuario_email, avatar, conteudo } = req.body;
-  if (!conteudo?.trim()) return res.status(400).json({ success: false, error: 'Mensagem vazia' });
-
-  const nova = {
-    id: msgId++,
-    usuario,
-    usuario_email,
-    avatar: avatar || null,
-    conteudo: conteudo.trim(),
-    data: new Date().toISOString(),
-  };
-
-  mensagens.push(nova);
-
-  // Limitar a 200 mensagens em memória
-  if (mensagens.length > 200) mensagens.shift();
-
-  // Broadcast SSE para todos
-  req.app.locals.broadcastSSE?.('nova_mensagem_chat', nova);
-
-  res.json({ success: true, data: nova });
+router.post('/', async (req, res) => {
+  try {
+    const { usuario, usuario_email, avatar, conteudo } = req.body;
+    if (!conteudo?.trim()) return res.status(400).json({ success: false, error: 'Mensagem vazia' });
+    const nova = await queryOne(
+      'INSERT INTO chat (usuario, usuario_email, avatar, conteudo) VALUES ($1, $2, $3, $4) RETURNING *',
+      [usuario, usuario_email, avatar || null, conteudo.trim()]
+    );
+    res.json({ success: true, data: nova });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// Deletar mensagem (só o próprio usuário)
-router.delete('/:id', (req, res) => {
-  const { usuario_email } = req.body;
-  const idx = mensagens.findIndex(m => m.id === parseInt(req.params.id));
-
-  if (idx === -1) return res.status(404).json({ success: false, error: 'Mensagem não encontrada' });
-  if (mensagens[idx].usuario_email !== usuario_email)
-    return res.status(403).json({ success: false, error: 'Sem permissão' });
-
-  mensagens.splice(idx, 1);
-
-  // Broadcast SSE para todos removerem da tela
-  req.app.locals.broadcastSSE?.('mensagem_deletada_chat', { id: parseInt(req.params.id) });
-
-  res.json({ success: true });
+router.delete('/:id', async (req, res) => {
+  try {
+    const { usuario_email } = req.body;
+    const msg = await queryOne('SELECT * FROM chat WHERE id = $1', [req.params.id]);
+    if (!msg) return res.status(404).json({ success: false, error: 'Mensagem não encontrada' });
+    if (msg.usuario_email !== usuario_email) return res.status(403).json({ success: false, error: 'Sem permissão' });
+    await query('DELETE FROM chat WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 module.exports = router;

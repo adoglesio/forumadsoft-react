@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback } from "react";
+import { supabase } from "../services/supabase";
 
 export function useNotificacoes({ user, onErroClick }) {
-  const sseRef = useRef(null);
+  const canalRef = useRef(null);
 
   const exibirToast = useCallback((mensagem, tipo = "info") => {
     const estilos = {
@@ -59,29 +60,24 @@ export function useNotificacoes({ user, onErroClick }) {
     }, 5000);
   }, []);
 
-  const conectar = useCallback(() => {
-    sseRef.current?.close();
-    const sse = new EventSource("/api/notificacoes/stream");
-    sseRef.current = sse;
-
-    sse.addEventListener("novo_erro", (e) => {
-      const d = JSON.parse(e.data);
-      if (d.criador_nome === user?.nome) return;
-      exibirToast(d.mensagem, "erro");
-    });
-
-    sse.addEventListener("novo_comentario", (e) => {
-      const d = JSON.parse(e.data);
-      if (d.usuario === user?.nome) return;
-      exibirToast(d.mensagem, "comentario");
-    });
-
-    sse.onerror = () => setTimeout(() => { if (user) conectar(); }, 5000);
-  }, [user, exibirToast]);
-
   useEffect(() => {
     if (!user) return;
-    conectar();
-    return () => { sseRef.current?.close(); };
-  }, [user, conectar]);
+
+    const canal = supabase
+      .channel("notificacoes-forum")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "erros" }, (payload) => {
+        const d = payload.new;
+        if (d.criador_nome === user?.nome) return;
+        exibirToast(`${d.criador_nome} reportou: "${d.titulo}"`, "erro");
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "comentarios" }, (payload) => {
+        const d = payload.new;
+        if (d.usuario === user?.nome) return;
+        exibirToast(`${d.usuario} comentou em um erro`, "comentario");
+      })
+      .subscribe();
+
+    canalRef.current = canal;
+    return () => { supabase.removeChannel(canal); };
+  }, [user, exibirToast]);
 }

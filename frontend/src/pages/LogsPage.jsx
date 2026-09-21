@@ -1,33 +1,33 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
+import { IoLockClosedOutline, IoTrashOutline, IoDocumentTextOutline, IoSearch } from "react-icons/io5";
 
 const TIPOS = [
-  { valor: "", label: "Todos", cor: "#5C6F87", bg: "#F1F5F9" },
-  { valor: "auth", label: "🔐 Login/Logout", cor: "#0A5C8E", bg: "#EFF7FF" },
-  { valor: "erro", label: "🐛 Erros", cor: "#DC2626", bg: "#FFF5F5" },
-  { valor: "comentario", label: "💬 Comentários", cor: "#22c55e", bg: "#F0FDF4" },
-  { valor: "perfil", label: "👤 Perfil", cor: "#C26B2E", bg: "#FFFBEB" },
+  { valor: "", label: "Todos" },
+  { valor: "auth", label: "🔐 Login/Logout" },
+  { valor: "erro", label: "🐛 Erros" },
+  { valor: "comentario", label: "💬 Comentários" },
+  { valor: "perfil", label: "👤 Perfil" },
 ];
 
 const ICONES = {
-  login:               { icon: "🔓", cor: "#22c55e" },
-  login_falhou:        { icon: "🚫", cor: "#DC2626" },
-  logout:              { icon: "🔒", cor: "#5C6F87" },
-  erro_criado:         { icon: "➕", cor: "#0A5C8E" },
-  erro_editado:        { icon: "✏️",  cor: "#C26B2E" },
-  erro_deletado:       { icon: "🗑️", cor: "#DC2626" },
-  comentario_criado:   { icon: "💬", cor: "#22c55e" },
-  comentario_editado:  { icon: "✏️",  cor: "#C26B2E" },
-  comentario_deletado: { icon: "🗑️", cor: "#DC2626" },
-  perfil_atualizado:   { icon: "👤", cor: "#0A5C8E" },
-  senha_alterada:      { icon: "🔑", cor: "#C26B2E" },
+  login:               { icon: "🔓", cor: "var(--success)", bg: "var(--success-bg)" },
+  login_falhou:        { icon: "🚫", cor: "var(--danger)",  bg: "var(--danger-bg)" },
+  logout:              { icon: "🔒", cor: "var(--text-secondary)", bg: "var(--surface-alt)" },
+  erro_criado:         { icon: "➕", cor: "var(--primary)", bg: "var(--primary-soft)" },
+  erro_editado:        { icon: "✏️",  cor: "var(--warning)", bg: "var(--warning-bg)" },
+  erro_deletado:       { icon: "🗑️", cor: "var(--danger)",  bg: "var(--danger-bg)" },
+  comentario_criado:   { icon: "💬", cor: "var(--success)", bg: "var(--success-bg)" },
+  comentario_editado:  { icon: "✏️",  cor: "var(--warning)", bg: "var(--warning-bg)" },
+  comentario_deletado: { icon: "🗑️", cor: "var(--danger)",  bg: "var(--danger-bg)" },
+  perfil_atualizado:   { icon: "👤", cor: "var(--primary)", bg: "var(--primary-soft)" },
+  senha_alterada:      { icon: "🔑", cor: "var(--warning)", bg: "var(--warning-bg)" },
 };
+const PADRAO = { icon: "📌", cor: "var(--text-secondary)", bg: "var(--surface-alt)" };
 
 export default function LogsPage({ onVoltar }) {
   const { user } = useAuth();
-  const { tema } = useTheme();
   const [logs, setLogs] = useState([]);
   const [filtroTipo, setFiltroTipo] = useState("");
   const [busca, setBusca] = useState("");
@@ -64,87 +64,76 @@ export default function LogsPage({ onVoltar }) {
   );
 
   if (!user?.isAdmin) return (
-    <div style={{ textAlign: "center", padding: 60, color: tema.textoMutado }}>
-      <p style={{ fontSize: 40 }}>🔒</p>
+    <div className="empty-state">
+      <IoLockClosedOutline size={40} style={{ marginBottom: 8 }} />
       <p>Acesso restrito a administradores.</p>
-      <button onClick={onVoltar} style={btnStyle}>Voltar</button>
+      <button onClick={onVoltar} className="btn btn-primary">Voltar</button>
     </div>
   );
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={onVoltar} style={btnOutlineStyle(tema)}>← Voltar</button>
-          <h2 style={{ margin: 0, color: tema.textoPrimario, fontSize: 20, fontWeight: 700 }}>
-            📋 Log de Atividades
-          </h2>
-        </div>
-        <button onClick={limparLogs} style={{ ...btnOutlineStyle(tema), color: "#DC2626", borderColor: "#DC2626" }}>
-          🗑️ Limpar logs
+    <div className="app-narrow" style={{ maxWidth: 900 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <h2 style={{ margin: 0, color: "var(--text)", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+          <IoDocumentTextOutline size={20} /> Log de atividades
+        </h2>
+        <button onClick={limparLogs} className="btn btn-danger btn-sm">
+          <IoTrashOutline size={14} /> Limpar logs
         </button>
       </div>
 
-      {/* Filtros de tipo */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         {TIPOS.map(t => (
           <button
             key={t.valor}
             onClick={() => setFiltroTipo(t.valor)}
-            style={{
-              padding: "6px 14px", borderRadius: 20, border: "none",
-              cursor: "pointer", fontSize: 13, fontWeight: 600,
-              background: filtroTipo === t.valor ? t.bg : tema.cardBg,
-              color: filtroTipo === t.valor ? t.cor : tema.textoSecundario,
-              outline: filtroTipo === t.valor ? `2px solid ${t.cor}` : `1px solid ${tema.inputBorder}`,
-            }}
+            className={`chip ${filtroTipo === t.valor ? "chip-active" : ""}`}
+            style={{ background: filtroTipo === t.valor ? "var(--primary-soft)" : undefined, color: filtroTipo === t.valor ? "var(--primary)" : undefined }}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      {/* Busca */}
-      <input
-        placeholder="Buscar nos logs..."
-        value={busca}
-        onChange={e => setBusca(e.target.value)}
-        style={{ width: "100%", padding: "10px 16px", borderRadius: 12, border: `1px solid ${tema.inputBorder}`, marginBottom: 16, fontSize: 14, outline: "none", background: tema.inputBg, color: tema.textoPrimario, boxSizing: "border-box" }}
-      />
+      <div style={{ position: "relative", marginBottom: 16 }}>
+        <IoSearch size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+        <input
+          placeholder="Buscar nos logs..."
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
+          className="input"
+          style={{ paddingLeft: 38 }}
+        />
+      </div>
 
-      {/* Contador */}
-      <p style={{ color: tema.textoMutado, fontSize: 13, marginBottom: 12 }}>
+      <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 12 }}>
         {logsFiltrados.length} registro{logsFiltrados.length !== 1 ? "s" : ""} encontrado{logsFiltrados.length !== 1 ? "s" : ""}
       </p>
 
-      {/* Lista de logs */}
       {carregando ? (
-        <div style={{ textAlign: "center", padding: 40, color: tema.textoMutado }}>Carregando...</div>
+        <div className="empty-state"><div className="skeleton-spinner" /></div>
       ) : logsFiltrados.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: tema.textoMutado }}>Nenhum log encontrado.</div>
+        <div className="empty-state">Nenhum log encontrado.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {logsFiltrados.map(log => {
-            const estilo = ICONES[log.acao] || { icon: "📌", cor: "#5C6F87" };
+            const estilo = ICONES[log.acao] || PADRAO;
             return (
-              <div key={log.id} style={{ background: tema.cardBg, border: `1px solid ${tema.headerBorder}`, borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: 12 }}>
-                {/* Ícone */}
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: estilo.cor + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
+              <div key={log.id} className="card" style={{ padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ width: 34, height: 34, borderRadius: "50%", background: estilo.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>
                   {estilo.icon}
                 </div>
 
-                {/* Conteúdo */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ fontWeight: 600, fontSize: 14, color: tema.textoPrimario }}>{log.usuario}</span>
-                    <span style={{ fontSize: 12, color: estilo.cor, background: estilo.cor + "18", padding: "2px 8px", borderRadius: 20 }}>{log.acao.replace(/_/g, " ")}</span>
-                    {log.ip && <span style={{ fontSize: 11, color: tema.textoMutado }}>IP: {log.ip}</span>}
+                    <span style={{ fontWeight: 600, fontSize: 14, color: "var(--text)" }}>{log.usuario}</span>
+                    <span className="badge" style={{ color: estilo.cor, background: estilo.bg }}>{log.acao.replace(/_/g, " ")}</span>
+                    {log.ip && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>IP: {log.ip}</span>}
                   </div>
-                  <p style={{ margin: "4px 0 0", fontSize: 13, color: tema.textoSecundario }}>{log.descricao}</p>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-secondary)" }}>{log.descricao}</p>
                 </div>
 
-                {/* Data */}
-                <span style={{ fontSize: 11, color: tema.textoMutado, flexShrink: 0, whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0, whiteSpace: "nowrap" }}>
                   {formatarData(log.created_at)}
                 </span>
               </div>
@@ -155,6 +144,3 @@ export default function LogsPage({ onVoltar }) {
     </div>
   );
 }
-
-const btnStyle = { padding: "10px 24px", background: "#0A5C8E", color: "white", border: "none", borderRadius: 40, fontWeight: 600, cursor: "pointer" };
-const btnOutlineStyle = (tema) => ({ padding: "8px 16px", background: "transparent", color: tema.textoSecundario, border: `1px solid ${tema.inputBorder}`, borderRadius: 40, cursor: "pointer", fontSize: 13 });
