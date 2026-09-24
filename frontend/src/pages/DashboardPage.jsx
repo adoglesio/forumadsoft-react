@@ -20,6 +20,8 @@ import PerfilSidebar from "../components/PerfilSidebar";
 import MigrarProdutosPage from "./MigrarProdutosPage";
 import { FaRegFolderOpen } from "react-icons/fa";
 import { IoArrowBack, IoSearch } from "react-icons/io5";
+import ProcedimentosPage from './ProcedimentosPage'
+
 
 function SubPageHeader({ titulo, onVoltar, direita }) {
   return (
@@ -52,6 +54,7 @@ export default function DashboardPage() {
   const [produtoFiltro, setProdutoFiltro] = useState("");
   const [viewMigrar, setViewMigrar] = useState(false);
   const [carregandoErros, setCarregandoErros] = useState(true);
+  const [viewProcedimentos, setViewProcedimentos] = useState(false);
 
   const carregar = useCallback(async () => {
     setCarregandoErros(true);
@@ -68,7 +71,7 @@ export default function DashboardPage() {
   }, [filtro, produtoFiltro]);
 
   useEffect(() => { carregar(); }, [carregar]);
-  useEffect(() => { listarProdutos().then(setProdutos).catch(() => {}); }, []);
+  useEffect(() => { listarProdutos().then(setProdutos).catch(() => { }); }, []);
 
   // Usuários online agora vêm do Supabase Realtime Presence (ao vivo, sem
   // polling e sem endpoint de ping no backend).
@@ -94,7 +97,7 @@ export default function DashboardPage() {
 
   if (viewGestao) return (
     <div className="app-shell">
-      <SubPageHeader />
+      <SubPageHeader onVoltar={() => setViewPerfil(false)} direita={<SeletorTema />} />
       <GestaoUsuariosPage onVoltar={() => setViewGestao(false)} />
     </div>
   );
@@ -106,9 +109,15 @@ export default function DashboardPage() {
     </div>
   );
 
+  if (viewProcedimentos) return (
+    <div className="app-shell">
+      <SubPageHeader onVoltar={() => setViewProcedimentos(false)} direita={<SeletorTema />} />
+      <ProcedimentosPage />
+    </div>);
+
   if (viewPerfil) return (
     <div className="app-shell">
-      <SubPageHeader direita={<SeletorTema />} />
+      <SubPageHeader onVoltar={() => setViewPerfil(false)} direita={<SeletorTema />} />
       <ProfilePage onVoltar={() => setViewPerfil(false)} />
     </div>
   );
@@ -131,7 +140,7 @@ export default function DashboardPage() {
     </div>
   );
 
-  // ── Dashboard principal ───────────────────────────────────────────────
+  // ── Dashboard principal
   return (
     <div className="app-shell">
       <Header
@@ -141,6 +150,7 @@ export default function DashboardPage() {
         onLogs={() => setViewLogs(true)}
         onGestao={() => setViewGestao(true)}
         onMigrar={() => setViewMigrar(true)}
+        onProcedimentos={() => setViewProcedimentos(true)}
         seletorTema={<SeletorTema />}
       />
 
@@ -156,10 +166,10 @@ export default function DashboardPage() {
           {statsComOnline && (
             <div className="stat-grid">
               {[
-                { label: "Total de Erros", valor: statsComOnline.totalErros,       bg: tema.statBg1, cor: tema.statCor1 },
-                { label: "Comentários",    valor: statsComOnline.totalComentarios, bg: tema.statBg2, cor: tema.statCor2 },
-                { label: "Usuários",       valor: statsComOnline.totalUsuarios,    bg: tema.statBg3, cor: tema.statCor3 },
-                { label: "Online agora",   valor: statsComOnline.usuariosOnline,   bg: tema.statBg4, cor: tema.statCor4 },
+                { label: "Total de Erros", valor: statsComOnline.totalErros, bg: tema.statBg1, cor: tema.statCor1 },
+                { label: "Comentários", valor: statsComOnline.totalComentarios, bg: tema.statBg2, cor: tema.statCor2 },
+                { label: "Usuários", valor: statsComOnline.totalUsuarios, bg: tema.statBg3, cor: tema.statCor3 },
+                { label: "Online agora", valor: statsComOnline.usuariosOnline, bg: tema.statBg4, cor: tema.statCor4 },
               ].map((s) => (
                 <div key={s.label} className="stat-card" style={{ background: s.bg }}>
                   <div className="stat-card-value" style={{ color: s.cor }}>{s.valor}</div>

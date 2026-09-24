@@ -17,6 +17,7 @@ app.use(express.json({ limit: '10mb' }));
 // ── Rotas da API ─────────────────────────────────────────────────────────
 app.use('/api/usuarios', require('./routes/usuarios'));
 app.use('/api/erros', require('./routes/erros'));
+app.use('/api/procedimentos',require('./routes/procedimentos'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/logs', require('./routes/logs'));
 app.use('/api/reacoes', require('./routes/reacoes'));

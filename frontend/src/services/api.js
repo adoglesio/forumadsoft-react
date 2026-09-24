@@ -81,3 +81,5 @@ export const getProdutosUsuario = (email) =>
 export const setProdutosUsuario = (email, produto_ids, usuario_email) =>
   api.put(`/produtos/usuario/${encodeURIComponent(email)}`, { produto_ids, usuario_email })
     .then((r) => r.data.success);
+
+export async function listarProcedimentos(produto_id = '') { const r = await api.get('/procedimentos', { params: produto_id ? { produto_id } : {} }); return r.data.data; } export async function criarProcedimento(dados) { const r = await api.post('/procedimentos', dados); return r.data.data; } export async function excluirProcedimento(id, usuario_email) { await api.delete(`/procedimentos/${id}`, { data: { usuario_email } }); }

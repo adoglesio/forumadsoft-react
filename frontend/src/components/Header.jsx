@@ -3,7 +3,7 @@ import { IoList, IoGrid, IoLink } from "react-icons/io5";
 import { useTheme } from "../context/ThemeContext";
 import { pararPresence } from "../services/presence";
 
-export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMigrar, seletorTema }) {
+export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMigrar, onProcedimentos, seletorTema }) {
   const { user, logout } = useAuth();
   const { tema } = useTheme();
 
@@ -41,6 +41,8 @@ export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMi
         <button onClick={onNovo} className="btn btn-primary">
           + Novo Erro
         </button>
+
+        <button onClick={onProcedimentos} className="btn btn-secondary btn-sm">Procedimentos</button>
 
         {user?.isAdmin && (
           <>
