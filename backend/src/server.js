@@ -10,10 +10,29 @@ const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // ── CORS ─────────────────────────────────────────────────────────────────
-// Em produção, defina FRONTEND_URL no .env para restringir a origem.
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
-app.use(express.json({ limit: '10mb' }));
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'https://forumadsoft-frontend.vercel.app',
+  /^https:\/\/forumadsoft-frontend-.*\.vercel\.app$/ // Aceita qualquer URL de preview do seu projeto
+];
 
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permite requisições sem origem (ex: Postman, Insomnia)
+    if (!origin) return callback(null, true);
+    
+    const isAllowed = allowedOrigins.some(allowed => 
+      typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+    );
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('Bloqueado pelo CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 // ── Rotas da API ─────────────────────────────────────────────────────────
 app.use('/api/usuarios', require('./routes/usuarios'));
 app.use('/api/erros', require('./routes/erros'));
