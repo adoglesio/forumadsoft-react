@@ -157,7 +157,7 @@ export default function NotificacoesPage({ onVoltar }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0 18px", gap: 12, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--primary-soft)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <IoBellOutline size={20} color="var(--primary)" />
+            <IoNotificationsOutline size={20} color="var(--primary)" />
           </div>
           <div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text)" }}>Notificações</h2>
@@ -209,7 +209,7 @@ export default function NotificacoesPage({ onVoltar }) {
         <div className="empty-state"><div className="skeleton-spinner" /></div>
       ) : logsFiltrados.length === 0 ? (
         <div className="empty-state">
-          <IoBellOutline size={36} style={{ marginBottom: 8, opacity: 0.3 }} />
+          <IoNotificationsOutline size={36} style={{ marginBottom: 8, opacity: 0.3 }} />
           <p style={{ color: "var(--text-muted)" }}>Nenhuma notificação encontrada.</p>
         </div>
       ) : (
