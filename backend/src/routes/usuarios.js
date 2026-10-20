@@ -32,6 +32,24 @@ router.get('/listar', async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// Busca nome + avatar de uma lista de emails (usado pelo painel de notificações)
+router.get('/lista-basica', async (req, res) => {
+  try {
+    const { emails } = req.query;
+    if (!emails) return res.json({ success: true, data: [] });
+    const lista = emails.split(',').map(e => e.trim()).filter(Boolean);
+    if (lista.length === 0) return res.json({ success: true, data: [] });
+
+    // Monta $1, $2, $3 ... dinamicamente
+    const placeholders = lista.map((_, i) => `$${i + 1}`).join(', ');
+    const usuarios = await query(
+      `SELECT email, nome, avatar FROM usuarios WHERE email IN (${placeholders})`,
+      lista
+    );
+    res.json({ success: true, data: usuarios });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 router.post('/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
