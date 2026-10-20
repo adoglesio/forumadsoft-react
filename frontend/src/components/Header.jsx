@@ -1,6 +1,11 @@
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { IoList, IoGrid, IoLink, IoBell } from "react-icons/io5";
+import {
+  IoList,
+  IoGrid,
+  IoLink,
+  IoNotifications
+} from "react-icons/io5";
 import { pararPresence } from "../services/presence";
 
 export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMigrar, onProcedimentos, onNotificacoes, seletorTema, totalNotificacoes = 0 }) {
