@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { listarErros, carregarEstatisticas } from "../services/api";
+import { supabase } from "../services/supabase";
 import Header from "../components/Header";
 import ErroCard from "../components/ErroCard";
 import NovoErroModal from "../components/NovoErroModal";
@@ -12,7 +13,7 @@ import { useNotificacoes } from "../hooks/useNotificacoes";
 import { useOnlineUsers } from "../hooks/useOnlineUsers";
 import { iniciarPresence, pararPresence } from "../services/presence";
 import LogsPage from "../pages/LogsPage";
-import Chat from "../components/Chat";
+import NotificacoesPage from "../pages/NotificacoesPage";
 import GestaoUsuariosPage from "./GestaoUsuariosPage";
 import { listarProdutos } from "../services/api";
 import ToggleTema from "../components/ToggleTema";
@@ -20,8 +21,7 @@ import PerfilSidebar from "../components/PerfilSidebar";
 import MigrarProdutosPage from "./MigrarProdutosPage";
 import { FaRegFolderOpen } from "react-icons/fa";
 import { IoArrowBack, IoSearch } from "react-icons/io5";
-import ProcedimentosPage from './ProcedimentosPage'
-
+import ProcedimentosPage from "./ProcedimentosPage";
 
 function SubPageHeader({ titulo, onVoltar, direita }) {
   return (
@@ -32,7 +32,9 @@ function SubPageHeader({ titulo, onVoltar, direita }) {
             <IoArrowBack size={14} /> Voltar
           </button>
         )}
-        <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, color: "var(--primary)", fontSize: 16, letterSpacing: -0.3 }}>{titulo || "Dodô Forum"}</span>
+        <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, color: "var(--primary)", fontSize: 16, letterSpacing: -0.3 }}>
+          {titulo || "Dodô Forum"}
+        </span>
       </div>
       {direita}
     </header>
@@ -50,11 +52,35 @@ export default function DashboardPage() {
   const [viewPerfil, setViewPerfil] = useState(false);
   const [viewLogs, setViewLogs] = useState(false);
   const [viewGestao, setViewGestao] = useState(false);
+  const [viewMigrar, setViewMigrar] = useState(false);
+  const [viewProcedimentos, setViewProcedimentos] = useState(false);
+  const [viewNotificacoes, setViewNotificacoes] = useState(false);
   const [produtos, setProdutos] = useState([]);
   const [produtoFiltro, setProdutoFiltro] = useState("");
-  const [viewMigrar, setViewMigrar] = useState(false);
   const [carregandoErros, setCarregandoErros] = useState(true);
-  const [viewProcedimentos, setViewProcedimentos] = useState(false);
+
+  // Contador de novas notificações — zera ao abrir o painel
+  const [novasNotif, setNovasNotif] = useState(0);
+  const viewNotifRef = useRef(viewNotificacoes);
+  useEffect(() => { viewNotifRef.current = viewNotificacoes; }, [viewNotificacoes]);
+
+  useEffect(() => {
+    if (!user) return;
+    const canal = supabase
+      .channel("dashboard-notif-counter")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "logs" }, (payload) => {
+        if (!viewNotifRef.current && payload.new?.usuario_email !== user.email) {
+          setNovasNotif(n => n + 1);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
+  }, [user]);
+
+  function abrirNotificacoes() {
+    setNovasNotif(0);
+    setViewNotificacoes(true);
+  }
 
   const carregar = useCallback(async () => {
     setCarregandoErros(true);
@@ -71,15 +97,14 @@ export default function DashboardPage() {
   }, [filtro, produtoFiltro]);
 
   useEffect(() => { carregar(); }, [carregar]);
-  useEffect(() => { listarProdutos().then(setProdutos).catch(() => { }); }, []);
+  useEffect(() => { listarProdutos().then(setProdutos).catch(() => {}); }, []);
 
-  // Usuários online agora vêm do Supabase Realtime Presence (ao vivo, sem
-  // polling e sem endpoint de ping no backend).
   useEffect(() => {
     if (!user) return;
     iniciarPresence(user);
     return () => pararPresence();
   }, [user]);
+
   const online = useOnlineUsers();
   const statsComOnline = stats ? { ...stats, usuariosOnline: online.length } : stats;
 
@@ -87,7 +112,7 @@ export default function DashboardPage() {
 
   const SeletorTema = () => <ToggleTema />;
 
-  // ── Sub-páginas ─────────────────────────────────────────────────────────
+  // Sub-páginas
   if (viewMigrar) return (
     <div className="app-shell">
       <SubPageHeader onVoltar={null} />
@@ -97,7 +122,7 @@ export default function DashboardPage() {
 
   if (viewGestao) return (
     <div className="app-shell">
-      <SubPageHeader onVoltar={() => setViewPerfil(false)} direita={<SeletorTema />} />
+      <SubPageHeader onVoltar={() => setViewGestao(false)} direita={<SeletorTema />} />
       <GestaoUsuariosPage onVoltar={() => setViewGestao(false)} />
     </div>
   );
@@ -109,11 +134,19 @@ export default function DashboardPage() {
     </div>
   );
 
+  if (viewNotificacoes) return (
+    <div className="app-shell">
+      <SubPageHeader onVoltar={() => setViewNotificacoes(false)} direita={<SeletorTema />} />
+      <NotificacoesPage onVoltar={() => setViewNotificacoes(false)} />
+    </div>
+  );
+
   if (viewProcedimentos) return (
     <div className="app-shell">
       <SubPageHeader onVoltar={() => setViewProcedimentos(false)} direita={<SeletorTema />} />
       <ProcedimentosPage />
-    </div>);
+    </div>
+  );
 
   if (viewPerfil) return (
     <div className="app-shell">
@@ -136,11 +169,9 @@ export default function DashboardPage() {
       />
       <ErroDetailPage erroId={viewErroId} onVoltar={() => setViewErroId(null)} onAtualizar={carregar} />
       {showNovo && <NovoErroModal onClose={() => setShowNovo(false)} onCriado={carregar} />}
-      <Chat />
     </div>
   );
 
-  // ── Dashboard principal
   return (
     <div className="app-shell">
       <Header
@@ -151,25 +182,24 @@ export default function DashboardPage() {
         onGestao={() => setViewGestao(true)}
         onMigrar={() => setViewMigrar(true)}
         onProcedimentos={() => setViewProcedimentos(true)}
+        onNotificacoes={abrirNotificacoes}
+        totalNotificacoes={novasNotif}
         seletorTema={<SeletorTema />}
       />
 
       <div className="app-content">
-
-        {/* Coluna esquerda: perfil + widget Copa */}
         <div className="app-aside-left" style={{ display: "flex", flexDirection: "column", gap: 12, flexShrink: 0, width: 236 }}>
           <PerfilSidebar onEditarPerfil={() => setViewPerfil(true)} />
         </div>
 
-        {/* Coluna central: stats + filtros + lista de erros */}
         <div className="app-main" style={{ minWidth: 0 }}>
           {statsComOnline && (
             <div className="stat-grid">
               {[
-                { label: "Total de Erros", valor: statsComOnline.totalErros, bg: tema.statBg1, cor: tema.statCor1 },
-                { label: "Comentários", valor: statsComOnline.totalComentarios, bg: tema.statBg2, cor: tema.statCor2 },
-                { label: "Usuários", valor: statsComOnline.totalUsuarios, bg: tema.statBg3, cor: tema.statCor3 },
-                { label: "Online agora", valor: statsComOnline.usuariosOnline, bg: tema.statBg4, cor: tema.statCor4 },
+                { label: "Total de Erros",  valor: statsComOnline.totalErros,       bg: tema.statBg1, cor: tema.statCor1 },
+                { label: "Comentários",     valor: statsComOnline.totalComentarios, bg: tema.statBg2, cor: tema.statCor2 },
+                { label: "Usuários",        valor: statsComOnline.totalUsuarios,    bg: tema.statBg3, cor: tema.statCor3 },
+                { label: "Online agora",    valor: statsComOnline.usuariosOnline,   bg: tema.statBg4, cor: tema.statCor4 },
               ].map((s) => (
                 <div key={s.label} className="stat-card" style={{ background: s.bg }}>
                   <div className="stat-card-value" style={{ color: s.cor }}>{s.valor}</div>
@@ -179,7 +209,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Filtro por produto */}
           {produtos.length > 0 && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
               <button
@@ -219,9 +248,7 @@ export default function DashboardPage() {
           ) : erros.length === 0 ? (
             <div className="empty-state">
               <p style={{ marginBottom: 16 }}>Nenhum erro encontrado.</p>
-              <button onClick={() => setShowNovo(true)} className="btn btn-primary">
-                + Reportar o primeiro
-              </button>
+              <button onClick={() => setShowNovo(true)} className="btn btn-primary">+ Reportar o primeiro</button>
             </div>
           ) : (
             erros.map((erro) => (
@@ -230,14 +257,12 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Coluna direita: usuários online */}
         <div className="app-aside-right">
           <UsuariosOnline />
         </div>
       </div>
 
       {showNovo && <NovoErroModal onClose={() => setShowNovo(false)} onCriado={carregar} />}
-      <Chat />
     </div>
   );
 }
