@@ -49,47 +49,47 @@ export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMi
 
         {/* Sino de notificações */}
         <button
-  onClick={onNotificacoes}
-  className="btn btn-secondary btn-sm"
-  title="Notificações"
-  style={{
-    position: "relative",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "6px 10px",
-    overflow: "visible"
-  }}
->
-  <IoNotifications size={16} />
+          onClick={onNotificacoes}
+          className="btn btn-secondary btn-sm"
+          title="Notificações"
+          style={{
+            position: "relative",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "6px 10px",
+            overflow: "visible"
+          }}
+        >
+          <IoNotifications size={16} />
 
-  {totalNotificacoes > 0 && (
-    <span
-      style={{
-        position: "absolute",
-        top: -6,
-        right: -6,
-        background: "#DC2626",
-        color: "white",
-        borderRadius: "50%",
-        fontSize: 10,
-        fontWeight: 700,
-        minWidth: 18,
-        height: 18,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "0 4px",
-        lineHeight: 1,
-        border: "2px solid var(--surface)",
-        zIndex: 1,
-        pointerEvents: "none"
-      }}
-    >
-      {totalNotificacoes > 99 ? "99+" : totalNotificacoes}
-    </span>
-  )}
-</button>
+          {totalNotificacoes > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: -6,
+                right: -6,
+                background: "#DC2626",
+                color: "white",
+                borderRadius: "50%",
+                fontSize: 10,
+                fontWeight: 700,
+                minWidth: 18,
+                height: 18,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "0 4px",
+                lineHeight: 1,
+                border: "2px solid var(--surface)",
+                zIndex: 1,
+                pointerEvents: "none"
+              }}
+            >
+              {totalNotificacoes > 99 ? "99+" : totalNotificacoes}
+            </span>
+          )}
+        </button>
 
         {user?.isAdmin && (
           <>
