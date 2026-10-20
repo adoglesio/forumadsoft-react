@@ -55,6 +55,7 @@ export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMi
           style={{ position: "relative", padding: "6px 10px" }}
         >
           <IoNotifications size={16} />
+
           {totalNotificacoes > 0 && (
             <span style={{
               position: "absolute", top: -4, right: -4,
