@@ -3,7 +3,18 @@ import { useTheme } from "../context/ThemeContext";
 import { IoList, IoGrid, IoLink, IoBell } from "react-icons/io5";
 import { pararPresence } from "../services/presence";
 
-export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMigrar, onProcedimentos, onNotificacoes, seletorTema, totalNotificacoes = 0 }) {
+export default function Header({ 
+  stats, 
+  onNovo, 
+  onPerfil, 
+  onLogs, 
+  onGestao, 
+  onMigrar, 
+  onProcedimentos, 
+  onNotificacoes, 
+  seletorTema, 
+  totalNotificacoes = 0 
+}) {
   const { user, logout } = useAuth();
   const { tema } = useTheme();
 
@@ -12,13 +23,20 @@ export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMi
     logout();
   }
 
-  const avatar = user?.avatar
-    ? <img src={user.avatar} alt="" style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: `2px solid var(--border)` }} />
-    : <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--primary)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{user?.nome?.charAt(0)?.toUpperCase()}</div>;
+  const avatar = user?.avatar ? (
+    <img 
+      src={user.avatar} 
+      alt="Avatar" 
+      style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: `2px solid var(--border)` }} 
+    />
+  ) : (
+    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--primary)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+      {user?.nome?.charAt(0)?.toUpperCase() || "?"}
+    </div>
+  );
 
   return (
     <header className="app-header" style={{ padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-
       <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
         <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18, color: "var(--primary)", letterSpacing: -0.3, flexShrink: 0 }}>
           Dodô Forum
@@ -39,7 +57,6 @@ export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMi
         {seletorTema}
 
         <button onClick={onNovo} className="btn btn-primary">+ Novo Erro</button>
-
         <button onClick={onProcedimentos} className="btn btn-secondary btn-sm">Procedimentos</button>
 
         {/* Sino de notificações */}
@@ -82,7 +99,7 @@ export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMi
         <div
           onClick={onPerfil}
           style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "4px 8px", borderRadius: 8, transition: "background 0.15s" }}
-          onMouseEnter={e => e.currentTarget.style.background = tema.sidebarHover}
+          onMouseEnter={e => e.currentTarget.style.background = tema?.sidebarHover || "rgba(0,0,0,0.05)"}
           onMouseLeave={e => e.currentTarget.style.background = "transparent"}
         >
           {avatar}
