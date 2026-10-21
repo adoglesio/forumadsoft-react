@@ -8,38 +8,57 @@ const app      = express();
 const PORT     = process.env.PORT    || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-//  CORS 
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
+// ── CORS ─────────────────────────────────────────────────────────────────
+// Aceita: domínio exato do FRONTEND_URL, qualquer subdomínio *.vercel.app,
+// e localhost para desenvolvimento local.
+const FRONTEND_URL = process.env.FRONTEND_URL || '';
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Sem origin = curl / Postman / server-to-server → permite
+    if (!origin) return callback(null, true);
+
+    const permitido =
+      origin === FRONTEND_URL ||                          // domínio exato configurado
+      origin.endsWith('.vercel.app') ||                   // qualquer deploy Vercel
+      origin.startsWith('http://localhost') ||            // dev local
+      origin.startsWith('http://127.0.0.1');              // dev local
+
+    if (permitido) return callback(null, true);
+    return callback(new Error(`CORS: origem não permitida — ${origin}`));
+  },
+  credentials: true,
+}));
+
 app.use(express.json({ limit: '10mb' }));
 
-//  HealthCheck (usado pela Vercel para verificar que a função sobe
+// ── Health-check ──────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, env: NODE_ENV, ts: new Date().toISOString() });
 });
 
-//  Rotas da API 
-// Carregamos as rotas de forma lazy para que um erro num único arquivo
-// não impeça o restantessss de subir.
-function safeRoute(path) {
+// ── Rotas ─────────────────────────────────────────────────────────────────
+function safeRoute(routePath) {
   try {
-    return require(path);
+    return require(routePath);
   } catch (err) {
-    console.error(`Erro ao carregar rota ${path}:`, err.message);
+    console.error(`Erro ao carregar rota ${routePath}:`, err.message);
     const r = express.Router();
-    r.all('*', (_req, res) => res.status(500).json({ error: `Rota ${path} falhou ao carregar: ${err.message}` }));
+    r.all('*', (_req, res) =>
+      res.status(500).json({ error: `Rota falhou ao carregar: ${err.message}` })
+    );
     return r;
   }
 }
 
-app.use('/api/usuarios',     safeRoute('./routes/usuarios'));
-app.use('/api/erros',        safeRoute('./routes/erros'));
-app.use('/api/procedimentos',safeRoute('./routes/procedimentos'));
-app.use('/api/logs',         safeRoute('./routes/logs'));
-app.use('/api/reacoes',      safeRoute('./routes/reacoes'));
-app.use('/api/produtos',     safeRoute('./routes/produtos'));
-// /api/chat removido — chat migrado para Supabase Realtime
+app.use('/api/usuarios',      safeRoute('./routes/usuarios'));
+app.use('/api/erros',         safeRoute('./routes/erros'));
+app.use('/api/procedimentos', safeRoute('./routes/procedimentos'));
+app.use('/api/logs',          safeRoute('./routes/logs'));
+app.use('/api/reacoes',       safeRoute('./routes/reacoes'));
+app.use('/api/produtos',      safeRoute('./routes/produtos'));
 
-//  Estatisticas 
+// ── Estatísticas ──────────────────────────────────────────────────────────
 app.get('/api/estatisticas', async (req, res) => {
   try {
     const { query } = require('./db/database');
@@ -52,13 +71,13 @@ app.get('/api/estatisticas', async (req, res) => {
   }
 });
 
-//  404 generico 
+// ── 404 ───────────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Rota não encontrada' }));
 
-//  Inicia servidor apenas quando rodado diretomente
+// ── Start (só dev local) ──────────────────────────────────────────────────
 if (require.main === module) {
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Backend rodando em http://0.0.0.0:${PORT}`);
+    console.log(`✅ Backend em http://0.0.0.0:${PORT}`);
   });
 }
 
