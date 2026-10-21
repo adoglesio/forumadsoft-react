@@ -446,6 +446,15 @@
       "senha": "4071",
       "isAdmin": false,
       "criado_em": "2026-04-28T13:12:43.000Z"
+    },
+    {
+      "id": "50",
+      "email": "fabio.batista@adsoft.com.br",
+      "nome": "Fábio Batista",
+      "bio": "",
+      "senha": "4071",
+      "isAdmin": false,
+      "criado_em": "2026-100-20T13:12:43.000Z"
     }
   ],
   "erros": [
@@ -596,6 +605,7 @@
       "criador_nome": "Adoglesio Gomes",
       "created_at": "2026-04-25T00:17:11.435Z",
       "comentarios": []
-    }
+    },
+    
   ]
 }

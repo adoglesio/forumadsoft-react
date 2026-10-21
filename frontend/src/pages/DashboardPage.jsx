@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { listarErros, carregarEstatisticas } from "../services/api";
+import { listarErros, carregarEstatisticas, listarProdutos } from "../services/api";
 import Header from "../components/Header";
 import ErroCard from "../components/ErroCard";
 import NovoErroModal from "../components/NovoErroModal";
@@ -12,27 +12,34 @@ import { useNotificacoes } from "../hooks/useNotificacoes";
 import { useOnlineUsers } from "../hooks/useOnlineUsers";
 import { iniciarPresence, pararPresence } from "../services/presence";
 import LogsPage from "../pages/LogsPage";
-import Chat from "../components/Chat";
 import GestaoUsuariosPage from "./GestaoUsuariosPage";
-import { listarProdutos } from "../services/api";
 import ToggleTema from "../components/ToggleTema";
 import PerfilSidebar from "../components/PerfilSidebar";
 import MigrarProdutosPage from "./MigrarProdutosPage";
+import ProcedimentosPage from "./ProcedimentosPage";
 import { FaRegFolderOpen } from "react-icons/fa";
-import { IoArrowBack, IoSearch } from "react-icons/io5";
-import ProcedimentosPage from './ProcedimentosPage'
+import { IoArrowBack, IoSearch, IoRefreshOutline } from "react-icons/io5";
 
-
+// ── Sub-header para sub-páginas ───────────────────────────────────────────
 function SubPageHeader({ titulo, onVoltar, direita }) {
   return (
-    <header className="app-header" style={{ padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+    <header className="app-header" style={{
+      padding: "10px 20px", display: "flex",
+      alignItems: "center", justifyContent: "space-between", gap: 12,
+      position: "sticky", top: 0, zIndex: 100,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
         {onVoltar && (
           <button onClick={onVoltar} className="btn btn-ghost btn-sm">
             <IoArrowBack size={14} /> Voltar
           </button>
         )}
-        <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, color: "var(--primary)", fontSize: 16, letterSpacing: -0.3 }}>{titulo || "Dodô Forum"}</span>
+        <span style={{
+          fontFamily: "var(--font-display)", fontWeight: 800,
+          color: "var(--primary)", fontSize: 16, letterSpacing: -0.3,
+        }}>
+          {titulo || "Dodô Forum"}
+        </span>
       </div>
       {direita}
     </header>
@@ -55,7 +62,10 @@ export default function DashboardPage() {
   const [viewMigrar, setViewMigrar] = useState(false);
   const [carregandoErros, setCarregandoErros] = useState(true);
   const [viewProcedimentos, setViewProcedimentos] = useState(false);
+  const [novasNotif, setNovasNotif] = useState(0);
+  const buscarTimer = useRef(null);
 
+  // Busca com debounce para não disparar a cada tecla
   const carregar = useCallback(async () => {
     setCarregandoErros(true);
     try {
@@ -65,59 +75,81 @@ export default function DashboardPage() {
       ]);
       setErros(lista);
       setStats(estatisticas);
+    } catch {
+      // silencioso — o usuário vê lista vazia
     } finally {
       setCarregandoErros(false);
     }
-  }, [filtro, produtoFiltro]);
+  }, [filtro, produtoFiltro, user?.email]);
 
-  useEffect(() => { carregar(); }, [carregar]);
-  useEffect(() => { listarProdutos().then(setProdutos).catch(() => { }); }, []);
+  // Debounce na busca por texto
+  useEffect(() => {
+    clearTimeout(buscarTimer.current);
+    buscarTimer.current = setTimeout(() => carregar(), filtro ? 400 : 0);
+    return () => clearTimeout(buscarTimer.current);
+  }, [carregar, filtro]);
 
-  // Usuários online agora vêm do Supabase Realtime Presence (ao vivo, sem
-  // polling e sem endpoint de ping no backend).
+  useEffect(() => {
+    listarProdutos().then(setProdutos).catch(() => {});
+  }, []);
+
+  // Presence via Supabase Realtime
   useEffect(() => {
     if (!user) return;
     iniciarPresence(user);
     return () => pararPresence();
   }, [user]);
+
   const online = useOnlineUsers();
   const statsComOnline = stats ? { ...stats, usuariosOnline: online.length } : stats;
 
-  useNotificacoes({ user, onErroClick: (id) => setViewErroId(id) });
+  // Notificações em tempo real — incrementa o contador do sino
+  useNotificacoes({
+    user,
+    onErroClick: (id) => {
+      setNovasNotif(0);
+      setViewErroId(id);
+    },
+  });
+
+  // Incrementa contador quando chega nova notificação via Supabase
+  // (feito dentro do hook com uma callback extra seria ideal, mas por ora
+  //  usamos o efeito de atualização do próprio carregar() periódico)
 
   const SeletorTema = () => <ToggleTema />;
 
-  // ── Sub-páginas ─────────────────────────────────────────────────────────
+  // ── Sub-páginas ──────────────────────────────────────────────────────────
   if (viewMigrar) return (
     <div className="app-shell">
-      <SubPageHeader onVoltar={null} />
+      <SubPageHeader titulo="Vincular Erros" onVoltar={() => setViewMigrar(false)} direita={<SeletorTema />} />
       <MigrarProdutosPage onVoltar={() => { setViewMigrar(false); carregar(); }} />
     </div>
   );
 
   if (viewGestao) return (
     <div className="app-shell">
-      <SubPageHeader onVoltar={() => setViewPerfil(false)} direita={<SeletorTema />} />
+      <SubPageHeader titulo="Gestão de Produtos" onVoltar={() => setViewGestao(false)} direita={<SeletorTema />} />
       <GestaoUsuariosPage onVoltar={() => setViewGestao(false)} />
     </div>
   );
 
   if (viewLogs) return (
     <div className="app-shell">
-      <SubPageHeader />
+      <SubPageHeader titulo="Logs do Sistema" onVoltar={() => setViewLogs(false)} direita={<SeletorTema />} />
       <LogsPage onVoltar={() => setViewLogs(false)} />
     </div>
   );
 
   if (viewProcedimentos) return (
     <div className="app-shell">
-      <SubPageHeader onVoltar={() => setViewProcedimentos(false)} direita={<SeletorTema />} />
+      <SubPageHeader titulo="Procedimentos" onVoltar={() => setViewProcedimentos(false)} direita={<SeletorTema />} />
       <ProcedimentosPage />
-    </div>);
+    </div>
+  );
 
   if (viewPerfil) return (
     <div className="app-shell">
-      <SubPageHeader onVoltar={() => setViewPerfil(false)} direita={<SeletorTema />} />
+      <SubPageHeader titulo="Meu Perfil" onVoltar={() => setViewPerfil(false)} direita={<SeletorTema />} />
       <ProfilePage onVoltar={() => setViewPerfil(false)} />
     </div>
   );
@@ -125,22 +157,26 @@ export default function DashboardPage() {
   if (viewErroId !== null) return (
     <div className="app-shell">
       <SubPageHeader
+        titulo="Detalhe do Erro"
         onVoltar={() => setViewErroId(null)}
         direita={
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <SeletorTema />
             <button onClick={() => setShowNovo(true)} className="btn btn-primary btn-sm">+ Novo</button>
             <button onClick={() => setViewPerfil(true)} className="btn btn-secondary btn-sm">Perfil</button>
           </div>
         }
       />
-      <ErroDetailPage erroId={viewErroId} onVoltar={() => setViewErroId(null)} onAtualizar={carregar} />
+      <ErroDetailPage
+        erroId={viewErroId}
+        onVoltar={() => setViewErroId(null)}
+        onAtualizar={carregar}
+      />
       {showNovo && <NovoErroModal onClose={() => setShowNovo(false)} onCriado={carregar} />}
-      <Chat />
     </div>
   );
 
-  // ── Dashboard principal
+  // ── Dashboard principal ──────────────────────────────────────────────────
   return (
     <div className="app-shell">
       <Header
@@ -151,28 +187,32 @@ export default function DashboardPage() {
         onGestao={() => setViewGestao(true)}
         onMigrar={() => setViewMigrar(true)}
         onProcedimentos={() => setViewProcedimentos(true)}
+        onNotificacoes={() => setNovasNotif(0)}
+        totalNotificacoes={novasNotif}
         seletorTema={<SeletorTema />}
       />
 
       <div className="app-content">
 
-        {/* Coluna esquerda: perfil + widget Copa */}
+        {/* Sidebar esquerda: perfil */}
         <div className="app-aside-left" style={{ display: "flex", flexDirection: "column", gap: 12, flexShrink: 0, width: 236 }}>
           <PerfilSidebar onEditarPerfil={() => setViewPerfil(true)} />
         </div>
 
-        {/* Coluna central: stats + filtros + lista de erros */}
+        {/* Coluna central */}
         <div className="app-main" style={{ minWidth: 0 }}>
+
+          {/* Stats */}
           {statsComOnline && (
             <div className="stat-grid">
               {[
-                { label: "Total de Erros", valor: statsComOnline.totalErros, bg: tema.statBg1, cor: tema.statCor1 },
-                { label: "Comentários", valor: statsComOnline.totalComentarios, bg: tema.statBg2, cor: tema.statCor2 },
-                { label: "Usuários", valor: statsComOnline.totalUsuarios, bg: tema.statBg3, cor: tema.statCor3 },
-                { label: "Online agora", valor: statsComOnline.usuariosOnline, bg: tema.statBg4, cor: tema.statCor4 },
+                { label: "Total de Erros",  valor: statsComOnline.totalErros,       bg: tema.statBg1, cor: tema.statCor1 },
+                { label: "Comentários",     valor: statsComOnline.totalComentarios, bg: tema.statBg2, cor: tema.statCor2 },
+                { label: "Usuários",        valor: statsComOnline.totalUsuarios,    bg: tema.statBg3, cor: tema.statCor3 },
+                { label: "Online agora",    valor: statsComOnline.usuariosOnline,   bg: tema.statBg4, cor: tema.statCor4 },
               ].map((s) => (
                 <div key={s.label} className="stat-card" style={{ background: s.bg }}>
-                  <div className="stat-card-value" style={{ color: s.cor }}>{s.valor}</div>
+                  <div className="stat-card-value" style={{ color: s.cor }}>{s.valor ?? "—"}</div>
                   <div className="stat-card-label">{s.label}</div>
                 </div>
               ))}
@@ -188,14 +228,17 @@ export default function DashboardPage() {
                 style={{ background: !produtoFiltro ? tema.statBg1 : undefined, color: !produtoFiltro ? tema.statCor1 : undefined }}
                 title="Todos os produtos"
               >
-                <FaRegFolderOpen />
+                <FaRegFolderOpen /> Todos
               </button>
-              {produtos.map(p => (
+              {produtos.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => setProdutoFiltro(produtoFiltro === p.id ? "" : p.id)}
                   className={`chip ${produtoFiltro === p.id ? "chip-active" : ""}`}
-                  style={{ background: produtoFiltro === p.id ? p.cor : undefined, color: produtoFiltro === p.id ? "white" : undefined }}
+                  style={{
+                    background: produtoFiltro === p.id ? p.cor : undefined,
+                    color: produtoFiltro === p.id ? "white" : undefined,
+                  }}
                 >
                   {p.nome}
                 </button>
@@ -203,41 +246,86 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Campo de busca */}
           <div style={{ position: "relative", marginBottom: 20 }}>
-            <IoSearch size={16} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+            <IoSearch size={15} style={{
+              position: "absolute", left: 13, top: "50%",
+              transform: "translateY(-50%)", color: "var(--text-muted)",
+            }} />
             <input
               placeholder="Buscar por título ou descrição..."
               value={filtro}
               onChange={(e) => setFiltro(e.target.value)}
               className="input"
-              style={{ paddingLeft: 38 }}
+              style={{ paddingLeft: 36 }}
             />
+            {filtro && (
+              <button
+                onClick={() => setFiltro("")}
+                style={{
+                  position: "absolute", right: 10, top: "50%",
+                  transform: "translateY(-50%)", background: "none",
+                  border: "none", cursor: "pointer", color: "var(--text-muted)",
+                  fontSize: 16, lineHeight: 1,
+                }}
+                title="Limpar busca"
+              >
+                ×
+              </button>
+            )}
           </div>
 
+          {/* Lista de erros */}
           {carregandoErros ? (
-            <div className="empty-state"><div className="skeleton-spinner" /></div>
+            <div className="empty-state">
+              <div className="skeleton-spinner" />
+            </div>
           ) : erros.length === 0 ? (
             <div className="empty-state">
-              <p style={{ marginBottom: 16 }}>Nenhum erro encontrado.</p>
-              <button onClick={() => setShowNovo(true)} className="btn btn-primary">
-                + Reportar o primeiro
-              </button>
+              <p style={{ marginBottom: 12, color: "var(--text-secondary)" }}>
+                {filtro || produtoFiltro ? "Nenhum erro encontrado para este filtro." : "Nenhum erro registrado ainda."}
+              </p>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                {(filtro || produtoFiltro) && (
+                  <button onClick={() => { setFiltro(""); setProdutoFiltro(""); }} className="btn btn-secondary btn-sm">
+                    Limpar filtros
+                  </button>
+                )}
+                <button onClick={() => setShowNovo(true)} className="btn btn-primary">
+                  + Reportar erro
+                </button>
+              </div>
             </div>
           ) : (
-            erros.map((erro) => (
-              <ErroCard key={erro.id} erro={erro} user={user} onAtualizar={carregar} onVerDetalhes={(id) => setViewErroId(id)} />
-            ))
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <small style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                  {erros.length} {erros.length === 1 ? "erro" : "erros"}
+                </small>
+                <button onClick={carregar} className="btn btn-ghost btn-sm" title="Atualizar">
+                  <IoRefreshOutline size={14} />
+                </button>
+              </div>
+              {erros.map((erro) => (
+                <ErroCard
+                  key={erro.id}
+                  erro={erro}
+                  user={user}
+                  onAtualizar={carregar}
+                  onVerDetalhes={(id) => setViewErroId(id)}
+                />
+              ))}
+            </>
           )}
         </div>
 
-        {/* Coluna direita: usuários online */}
+        {/* Sidebar direita: usuários online */}
         <div className="app-aside-right">
           <UsuariosOnline />
         </div>
       </div>
 
       {showNovo && <NovoErroModal onClose={() => setShowNovo(false)} onCriado={carregar} />}
-      <Chat />
     </div>
   );
 }

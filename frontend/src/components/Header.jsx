@@ -1,9 +1,20 @@
 import { useAuth } from "../context/AuthContext";
-import { IoList, IoGrid, IoLink } from "react-icons/io5";
 import { useTheme } from "../context/ThemeContext";
+import { IoList, IoGrid, IoLink, IoNotifications } from "react-icons/io5";
 import { pararPresence } from "../services/presence";
 
-export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMigrar, onProcedimentos, seletorTema }) {
+export default function Header({ 
+  stats, 
+  onNovo, 
+  onPerfil, 
+  onLogs, 
+  onGestao, 
+  onMigrar, 
+  onProcedimentos, 
+  onNotificacoes, 
+  seletorTema, 
+  totalNotificacoes = 0 
+}) {
   const { user, logout } = useAuth();
   const { tema } = useTheme();
 
@@ -12,13 +23,20 @@ export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMi
     logout();
   }
 
-  const avatar = user?.avatar
-    ? <img src={user.avatar} alt="" style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: `2px solid var(--border)` }} />
-    : <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--primary)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{user?.nome?.charAt(0)?.toUpperCase()}</div>;
+  const avatar = user?.avatar ? (
+    <img 
+      src={user.avatar} 
+      alt="Avatar" 
+      style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: `2px solid var(--border)` }} 
+    />
+  ) : (
+    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--primary)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+      {user?.nome?.charAt(0)?.toUpperCase() || "?"}
+    </div>
+  );
 
   return (
     <header className="app-header" style={{ padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-
       <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
         <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18, color: "var(--primary)", letterSpacing: -0.3, flexShrink: 0 }}>
           Dodô Forum
@@ -38,11 +56,32 @@ export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMi
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
         {seletorTema}
 
-        <button onClick={onNovo} className="btn btn-primary">
-          + Novo Erro
-        </button>
-
+        <button onClick={onNovo} className="btn btn-primary">+ Novo Erro</button>
         <button onClick={onProcedimentos} className="btn btn-secondary btn-sm">Procedimentos</button>
+
+        
+        <button
+          onClick={onNotificacoes}
+          className="btn btn-secondary btn-sm"
+          title="Notificações"
+          style={{ position: "relative", padding: "6px 10px" }}
+        >
+          
+          <IoNotifications size={16} />
+          {totalNotificacoes > 0 && (
+            <span style={{
+              position: "absolute", top: -4, right: -4,
+              background: "#DC2626", color: "white",
+              borderRadius: "50%", fontSize: 10, fontWeight: 700,
+              minWidth: 18, height: 18,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: "0 4px", lineHeight: 1,
+              border: "2px solid var(--surface)",
+            }}>
+              {totalNotificacoes > 99 ? "99+" : totalNotificacoes}
+            </span>
+          )}
+        </button>
 
         {user?.isAdmin && (
           <>
@@ -61,16 +100,16 @@ export default function Header({ stats, onNovo, onPerfil, onLogs, onGestao, onMi
         <div
           onClick={onPerfil}
           style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "4px 8px", borderRadius: 8, transition: "background 0.15s" }}
-          onMouseEnter={e => e.currentTarget.style.background = tema.sidebarHover}
+          onMouseEnter={e => e.currentTarget.style.background = tema?.sidebarHover || "rgba(0,0,0,0.05)"}
           onMouseLeave={e => e.currentTarget.style.background = "transparent"}
         >
           {avatar}
-          <span className="app-header-actions-label" style={{ fontSize: 13, color: "var(--text)", fontWeight: 500, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.nome}</span>
+          <span className="app-header-actions-label" style={{ fontSize: 13, color: "var(--text)", fontWeight: 500, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {user?.nome}
+          </span>
         </div>
 
-        <button onClick={handleLogout} className="btn btn-danger btn-sm">
-          Sair
-        </button>
+        <button onClick={handleLogout} className="btn btn-danger btn-sm">Sair</button>
       </div>
     </header>
   );

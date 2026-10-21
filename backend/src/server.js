@@ -1,59 +1,64 @@
 require('dotenv').config();
 
 const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const { query } = require('./db/database');
+const cors    = require('cors');
+const path    = require('path');
 
-const app = express();
-const PORT = process.env.PORT || 3001;
+const app      = express();
+const PORT     = process.env.PORT    || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// ── CORS ─────────────────────────────────────────────────────────────────
-// Em produção, defina FRONTEND_URL no .env para restringir a origem.
+//  CORS 
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json({ limit: '10mb' }));
 
-// ── Rotas da API ─────────────────────────────────────────────────────────
-app.use('/api/usuarios', require('./routes/usuarios'));
-app.use('/api/erros', require('./routes/erros'));
-app.use('/api/procedimentos',require('./routes/procedimentos'));
-app.use('/api/chat', require('./routes/chat'));
-app.use('/api/logs', require('./routes/logs'));
-app.use('/api/reacoes', require('./routes/reacoes'));
-app.use('/api/produtos', require('./routes/produtos'));
-
-// ── Estatísticas ─────────────────────────────────────────────────────────
-// "usuariosOnline" agora vem do Supabase Realtime Presence, direto no
-// frontend — não faz mais sentido o backend rastrear isso.
-app.get('/api/estatisticas', async (req, res) => {
-  try {
-    const [{ c: totalErros }] = await query('SELECT COUNT(*)::int as c FROM erros');
-    const [{ c: totalComentarios }] = await query('SELECT COUNT(*)::int as c FROM comentarios');
-    const [{ c: totalUsuarios }] = await query('SELECT COUNT(*)::int as c FROM usuarios');
-    res.json({ success: true, data: { totalErros, totalComentarios, totalUsuarios } });
-  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+//  HealthCheck (usado pela Vercel para verificar que a função sobe
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, env: NODE_ENV, ts: new Date().toISOString() });
 });
 
-// ── Servir frontend buildado (só usado se você rodar frontend + backend
-// juntos fora da Vercel; no deploy Vercel cada um é um projeto separado) ──
-if (NODE_ENV === 'production' && process.env.VERCEL !== '1') {
-  const distPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
-  app.use(express.static(distPath));
-  app.get('/{*path}', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
+//  Rotas da API 
+// Carregamos as rotas de forma lazy para que um erro num único arquivo
+// não impeça o restantessss de subir.
+function safeRoute(path) {
+  try {
+    return require(path);
+  } catch (err) {
+    console.error(`Erro ao carregar rota ${path}:`, err.message);
+    const r = express.Router();
+    r.all('*', (_req, res) => res.status(500).json({ error: `Rota ${path} falhou ao carregar: ${err.message}` }));
+    return r;
+  }
 }
 
-// ── Inicia servidor apenas quando rodado diretamente (node server.js) ────
-// Na Vercel o arquivo backend/api/index.js importa `app` sem chamar listen().
+app.use('/api/usuarios',     safeRoute('./routes/usuarios'));
+app.use('/api/erros',        safeRoute('./routes/erros'));
+app.use('/api/procedimentos',safeRoute('./routes/procedimentos'));
+app.use('/api/logs',         safeRoute('./routes/logs'));
+app.use('/api/reacoes',      safeRoute('./routes/reacoes'));
+app.use('/api/produtos',     safeRoute('./routes/produtos'));
+// /api/chat removido — chat migrado para Supabase Realtime
+
+//  Estatisticas 
+app.get('/api/estatisticas', async (req, res) => {
+  try {
+    const { query } = require('./db/database');
+    const [{ c: totalErros }]       = await query('SELECT COUNT(*)::int as c FROM erros');
+    const [{ c: totalComentarios }] = await query('SELECT COUNT(*)::int as c FROM comentarios');
+    const [{ c: totalUsuarios }]    = await query('SELECT COUNT(*)::int as c FROM usuarios');
+    res.json({ success: true, data: { totalErros, totalComentarios, totalUsuarios } });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+//  404 generico 
+app.use((_req, res) => res.status(404).json({ error: 'Rota não encontrada' }));
+
+//  Inicia servidor apenas quando rodado diretomente
 if (require.main === module) {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Backend rodando em http://0.0.0.0:${PORT}`);
-    if (NODE_ENV !== 'production') {
-      console.log(`   Frontend (Vite): npm run dev na pasta /frontend`);
-      console.log(`   Acesso local:    http://localhost:5173`);
-    }
   });
 }
 

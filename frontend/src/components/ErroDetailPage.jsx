@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from "react";
-import {
+import api, {
   buscarErro, editarErro, excluirErro,
   adicionarComentario, editarComentario, excluirComentario,
+  listarProdutos, getProdutosUsuario,
 } from "../services/api";
+
 import { useAuth } from "../context/AuthContext";
 import Reacoes from "./Reacoes";
 import PainelEmoji from "./PainelEmoji";
 import LogoProduto from "./LogoProduto";
-import { listarProdutos, getProdutosUsuario } from "../services/api";
-import api from "../services/api";
 import { IoPencil, IoTrashOutline, IoSend, IoChatbubbles, IoCheckmarkCircle, IoCamera, IoClose } from "react-icons/io5";
 import { MdOutlineDescription } from "react-icons/md";
 
